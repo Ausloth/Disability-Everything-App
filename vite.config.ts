@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
-      base: './', // Makes asset paths relative for GitHub Pages
+      base: './', // Makes asset paths relative, allowing it to be hosted on any subpath (like GitHub Pages) without hardcoding the repo name!
       server: {
         port: 3000,
         host: '0.0.0.0',
