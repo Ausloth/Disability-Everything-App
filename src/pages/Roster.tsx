@@ -76,54 +76,56 @@ export function Roster() {
         </div>
       </div>
 
-      <Card className="overflow-hidden border-0 shadow-sm ring-1 ring-border">
-        <div className="grid grid-cols-6 min-w-[800px] border-b bg-muted/40">
-          <div className="p-4 border-r font-medium text-sm text-center flex items-center justify-center">
-            <span className="text-muted-foreground">Session</span>
-          </div>
-          {DAYS.map(day => (
-            <div key={day} className="p-4 border-r last:border-r-0 font-medium text-center text-sm">
-              {day}
+      <Card className="border-0 shadow-sm ring-1 ring-border">
+        <div className="overflow-x-auto">
+          <div className="grid grid-cols-[100px_repeat(5,minmax(180px,1fr))] border-b bg-muted/40 min-w-[1000px]">
+            <div className="p-4 border-r font-medium text-sm text-center flex items-center justify-center">
+              <span className="text-muted-foreground">Session</span>
             </div>
-          ))}
-        </div>
-        
-        <div className="flex flex-col min-w-[800px]">
-          {SESSIONS.map(session => (
-            <div key={session} className="grid grid-cols-6 border-b last:border-b-0 min-h-[220px]">
-              <div className="p-4 border-r bg-muted/20 flex items-center justify-center">
-                <span className="font-medium text-sm text-muted-foreground rotate-[-90deg] uppercase tracking-widest whitespace-nowrap">
-                  {session}
-                </span>
+            {DAYS.map(day => (
+              <div key={day} className="p-4 border-r last:border-r-0 font-medium text-center text-sm">
+                {day}
               </div>
-              
-              {DAYS.map(day => {
-                const sessions = mockSchedule.filter(s => s.day === day && s.session === session)
-                return (
-                  <div key={`${day}-${session}`} className="p-2 border-r last:border-r-0 bg-slate-50/50 dark:bg-slate-900/20 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors cursor-crosshair">
-                    <div className="space-y-2 h-full rounded-md">
-                      {sessions.map(s => (
-                        <div key={s.id} onClick={() => setSelectedActivity(s)} className={`p-3 rounded-lg border shadow-sm flex flex-col gap-2 ${s.color} transition-all hover:scale-[1.02] cursor-pointer`}>
-                          <h4 className="font-bold text-sm leading-tight">{s.activity}</h4>
-                          <div className="flex items-center gap-1.5 text-xs opacity-90">
-                            <MapPin className="w-3 h-3" />
-                            <span className="truncate">{s.location}</span>
-                          </div>
-                          <div className="flex items-center justify-between mt-1 text-xs font-medium opacity-90 border-t border-current/10 pt-2">
-                            <div className="flex items-center gap-1">
-                              <User className="w-3 h-3" />
-                              <span>{s.clients} Clients</span>
+            ))}
+          </div>
+          
+          <div className="flex flex-col min-w-[1000px]">
+            {SESSIONS.map(session => (
+              <div key={session} className="grid grid-cols-[100px_repeat(5,minmax(180px,1fr))] border-b last:border-b-0 min-h-[220px]">
+                <div className="p-4 border-r bg-muted/20 flex flex-col items-center justify-center">
+                  <span className="font-bold text-sm text-muted-foreground uppercase tracking-widest text-center whitespace-pre-wrap">
+                    {session.split('').join('\n')}
+                  </span>
+                </div>
+                
+                {DAYS.map(day => {
+                  const sessions = mockSchedule.filter(s => s.day === day && s.session === session)
+                  return (
+                    <div key={`${day}-${session}`} className="p-2 border-r last:border-r-0 bg-slate-50/50 dark:bg-slate-900/20 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors cursor-crosshair">
+                      <div className="space-y-2 h-full rounded-md">
+                        {sessions.map(s => (
+                          <div key={s.id} onClick={() => setSelectedActivity(s)} className={`p-3 rounded-lg border shadow-sm flex flex-col gap-2 ${s.color} transition-all hover:scale-[1.02] cursor-pointer`}>
+                            <h4 className="font-bold text-sm leading-tight">{s.activity}</h4>
+                            <div className="flex items-center gap-1.5 text-xs opacity-90">
+                              <MapPin className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">{s.location}</span>
                             </div>
-                            <div>{s.staff} Staff</div>
+                            <div className="flex items-center justify-between mt-1 text-xs font-medium opacity-90 border-t border-current/10 pt-2">
+                              <div className="flex items-center gap-1 whitespace-nowrap">
+                                <User className="w-3 h-3" />
+                                <span>{s.clients} Clients</span>
+                              </div>
+                              <div className="whitespace-nowrap">{s.staff} Staff</div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
 
