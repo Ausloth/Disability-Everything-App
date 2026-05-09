@@ -213,10 +213,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Mobile Navigation (Bottom) */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t z-50 flex items-center justify-between px-2 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_20px_rgba(0,0,0,0.2)]">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t z-50 flex items-center justify-between px-2 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-10px_20px_rgba(0,0,0,0.2)] overflow-x-auto">
           {coreNav
-            .filter((item) => item.show)
-            .slice(0, 5)
+            .filter((item) => item.show && item.name !== "AI Prompt Generator")
             .map((item) => {
               // Precise active state matching
               const isActive =
@@ -236,7 +235,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   key={item.name}
                   to={item.href}
                   className={cn(
-                    "flex flex-col items-center justify-center flex-1 py-3 gap-1 relative",
+                    "flex flex-col items-center justify-center min-w-[64px] flex-shrink-0 py-3 gap-1 relative",
                     isActive
                       ? "text-emerald-600 dark:text-emerald-400"
                       : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-50",

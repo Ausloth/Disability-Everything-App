@@ -33,6 +33,59 @@ export interface RiskAssessmentItem {
   responsible: string;
 }
 
+export interface ClientRisk {
+  id: string;
+  category: "Medical / Health" | "Behavioural" | "Environmental" | "Other";
+  hazard: string;
+  level: "Low" | "Medium" | "High" | "Extreme";
+  mitigation: string;
+  lastReviewed: string;
+  nextReview: string;
+}
+
+export interface ClientGoal {
+  id: string;
+  title: string;
+  description: string;
+  status: "Active" | "Completed" | "On Hold";
+}
+
+export interface Client {
+  id: string;
+  name: string;
+  age?: number;
+  supportLevel?: string;
+  risks?: ClientRisk[];
+  goals?: ClientGoal[];
+}
+
+export interface JournalNote {
+  id: string;
+  timestamp: string;
+  staffId: string;
+  clientIds: string[];
+  noteType: string;
+  subject: string;
+  content: string;
+  linkedGoalIds: string[];
+
+  // Activity specific
+  scheduleId?: string;
+  activityId?: string;
+  outlineId?: string;
+  currentWeek?: number;
+
+  // Barriers
+  barriers?: {
+    physical: string;
+    sensory: string;
+    cognitive: string;
+    social: string;
+    strategies: string;
+    impact: "Low" | "Medium" | "High" | "";
+  };
+}
+
 export interface ActivityOutline {
   id: string;
   activityId: string;
@@ -57,9 +110,10 @@ export interface State {
 
   // Stub data
   activities: any[];
-  clients: any[];
+  clients: Client[];
   schedules: any[];
   outlines: ActivityOutline[];
+  notes: JournalNote[];
   commBoards: Array<{
     id: string;
     title: string;
@@ -80,6 +134,8 @@ export interface State {
   deleteCommBoard: (id: string) => void;
   updateOutline: (outline: ActivityOutline) => void;
   addOutline: (outline: ActivityOutline) => void;
+  updateClient: (client: Client) => void;
+  addJournalNote: (note: JournalNote) => void;
 }
 
 const MOCK_ACTIVITIES = [
@@ -186,6 +242,55 @@ const MOCK_SCHEDULES = [
   },
 ];
 
+const MOCK_CLIENTS: Client[] = [
+  {
+    id: "Alice",
+    name: "Alice",
+    age: 24,
+    supportLevel: "Medium",
+    risks: [
+      {
+        id: "1",
+        category: "Medical / Health",
+        hazard: "Peanut Allergy",
+        level: "Extreme",
+        mitigation: "Carry EpiPen at all times. Staff must be trained.",
+        lastReviewed: "2026-01-01",
+        nextReview: "2027-01-01",
+      },
+    ],
+    goals: [
+      {
+        id: "g1",
+        title: "Improve social participation",
+        description: "Engage with peers in group settings",
+        status: "Active",
+      },
+    ],
+  },
+  {
+    id: "Bob",
+    name: "Bob",
+    age: 30,
+    supportLevel: "High",
+    risks: [
+      {
+        id: "2",
+        category: "Behavioural",
+        hazard: "Wandering",
+        level: "High",
+        mitigation: "Keep in line of sight when in community.",
+        lastReviewed: "2026-03-01",
+        nextReview: "2026-09-01",
+      },
+    ],
+    goals: [],
+  },
+  { id: "Charlie", name: "Charlie", goals: [], risks: [] },
+  { id: "David", name: "David", goals: [], risks: [] },
+  { id: "Eve", name: "Eve", goals: [], risks: [] },
+];
+
 export const useStore = create<State>((set) => ({
   user: {
     id: "user-1",
@@ -205,9 +310,10 @@ export const useStore = create<State>((set) => ({
   },
 
   activities: MOCK_ACTIVITIES,
-  clients: [],
+  clients: MOCK_CLIENTS,
   schedules: MOCK_SCHEDULES,
   outlines: MOCK_OUTLINES,
+  notes: [],
   commBoards: [
     {
       id: "common-1",
@@ -288,6 +394,12 @@ export const useStore = create<State>((set) => ({
     })),
   addOutline: (outline) =>
     set((state) => ({ outlines: [...state.outlines, outline] })),
+
+  updateClient: (client) =>
+    set((state) => ({
+      clients: state.clients.map((c) => (c.id === client.id ? client : c)),
+    })),
+  addJournalNote: (note) => set((state) => ({ notes: [...state.notes, note] })),
 
   activateLicense: (key) =>
     set((state) => {
