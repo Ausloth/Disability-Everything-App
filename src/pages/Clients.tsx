@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import {
   Plus,
@@ -114,29 +115,29 @@ export function Clients() {
           {isManager && (
             <div className="flex gap-2">
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white">
-                    <ClipboardList className="w-4 h-4" />
-                    Assessments & Goals
-                    <ChevronDown className="w-4 h-4 ml-1" />
-                  </Button>
+                <DropdownMenuTrigger className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+                  <ClipboardList className="w-4 h-4" />
+                  Assessments & Goals
+                  <ChevronDown className="w-4 h-4 ml-1" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64">
-                  <DropdownMenuLabel>Guided Interviews</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate(`/clients/${selectedClient.id}/interview?mode=full`)} className="cursor-pointer py-2">
-                    <div className="flex flex-col gap-1">
-                      <span className="font-semibold flex items-center gap-2"><Target className="w-4 h-4 text-indigo-600"/> Full Assessment & Goals</span>
-                      <span className="text-xs text-slate-500">Run the complete support needs and personal goals interview</span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate(`/clients/${selectedClient.id}/interview?mode=support_only`)} className="cursor-pointer py-2">
-                     <span className="flex items-center gap-2"><ClipboardList className="w-4 h-4 text-slate-500"/> Support Needs Only</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate(`/clients/${selectedClient.id}/interview?mode=goals_only`)} className="cursor-pointer py-2">
-                     <span className="flex items-center gap-2"><Target className="w-4 h-4 text-slate-500"/> Personal Goals Only</span>
-                  </DropdownMenuItem>
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>Guided Interviews</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate(`/clients/${selectedClient.id}/interview?mode=full`)} className="cursor-pointer py-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-semibold flex items-center gap-2"><Target className="w-4 h-4 text-indigo-600"/> Full Assessment & Goals</span>
+                        <span className="text-xs text-slate-500">Run the complete support needs and personal goals interview</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate(`/clients/${selectedClient.id}/interview?mode=support_only`)} className="cursor-pointer py-2">
+                       <span className="flex items-center gap-2"><ClipboardList className="w-4 h-4 text-slate-500"/> Support Needs Only</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(`/clients/${selectedClient.id}/interview?mode=goals_only`)} className="cursor-pointer py-2">
+                       <span className="flex items-center gap-2"><Target className="w-4 h-4 text-slate-500"/> Personal Goals Only</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button variant="outline">Edit Profile</Button>
@@ -495,7 +496,7 @@ export function Clients() {
                                <h4 className="font-bold text-slate-900">{contact.name}</h4>
                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest">{contact.relationship}</span>
                              </div>
-                             {contact.isEmergency && <AlertCircle className="w-5 h-5 text-red-500" title="Emergency Contact" />}
+                             {contact.isEmergency && <span title="Emergency Contact"><AlertCircle className="w-5 h-5 text-red-500" /></span>}
                           </div>
                           <div className="bg-slate-50 rounded-md p-2 space-y-1 mt-auto">
                             <div className="text-sm font-medium flex items-center gap-2"><Phone className="w-3 h-3 text-slate-400" /> {contact.phone}</div>
