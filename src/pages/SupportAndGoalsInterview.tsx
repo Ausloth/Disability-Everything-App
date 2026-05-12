@@ -37,14 +37,20 @@ export function SupportAndGoalsInterview() {
   const [newDream, setNewDream] = useState("");
   const [smartGoals, setSmartGoals] = useState<any[]>([]);
   
+  const [hasLoadedDraft, setHasLoadedDraft] = useState(false);
+  
   useEffect(() => {
+    if (hasLoadedDraft) return;
+
     if (draft && draft.data) {
       if (draft.data.supportNeeds) setSupportNeeds(draft.data.supportNeeds);
       if (draft.data.hopesAndDreams) setHopesAndDreams(draft.data.hopesAndDreams);
       if (draft.data.smartGoals) setSmartGoals(draft.data.smartGoals);
       setCurrentStep(draft.currentStep || 0);
     }
-  }, [draft]);
+    
+    setHasLoadedDraft(true);
+  }, [draft, hasLoadedDraft]);
 
   if (!client) {
     return <div className="p-12 text-center">Client not found.</div>;
@@ -94,18 +100,19 @@ export function SupportAndGoalsInterview() {
 
   const currentStepData = steps[currentStep] || steps[0];
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = (stepToSave = currentStep) => {
     saveInterviewDraft({
       clientId: client.id,
       lastSaved: new Date().toISOString(),
       type: mode as any,
-      currentStep,
+      currentStep: stepToSave,
       data: { supportNeeds, hopesAndDreams, smartGoals }
     });
   };
 
   const handleNext = () => {
-    handleSaveDraft();
+    const nextStep = currentStep < steps.length - 1 ? currentStep + 1 : currentStep;
+    handleSaveDraft(nextStep);
     if (currentStep < steps.length - 1) {
       setCurrentStep(prev => prev + 1);
       window.scrollTo(0, 0);
@@ -113,7 +120,8 @@ export function SupportAndGoalsInterview() {
   };
 
   const handleBack = () => {
-    handleSaveDraft();
+    const prevStep = currentStep > 0 ? currentStep - 1 : currentStep;
+    handleSaveDraft(prevStep);
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
       window.scrollTo(0, 0);
