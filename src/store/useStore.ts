@@ -35,7 +35,7 @@ export interface RiskAssessmentItem {
 
 export interface ClientRisk {
   id: string;
-  category: "Medical / Health" | "Behavioural" | "Environmental" | "Other";
+  category: "Medical / Health" | "Behavioural" | "Environmental" | "Mobility / Safety" | "Other";
   hazard: string;
   level: "Low" | "Medium" | "High" | "Extreme";
   mitigation: string;
@@ -46,17 +46,71 @@ export interface ClientRisk {
 export interface ClientGoal {
   id: string;
   title: string;
+  type: "NDIS" | "Personal";
   description: string;
   status: "Active" | "Completed" | "On Hold";
+}
+
+export interface ClientMedication {
+  id: string;
+  name: string;
+  dose: string;
+  route: string;
+  schedule: string;
+  prn: boolean;
+  prescribingDoctor?: string;
+  notes?: string;
+  hasRisks?: boolean; // Can be used to show warning if not in risk assessment
+}
+
+export interface ClientContact {
+  id: string;
+  name: string;
+  relationship: "Emergency Contact" | "Family" | "Carer" | "OT" | "Speech Pathologist" | "Physiotherapist" | "Behaviour Support Practitioner" | "Other";
+  phone: string;
+  email?: string;
+  isEmergency: boolean;
+}
+
+export interface BehaviourStrategy {
+  id: string;
+  trigger: string;
+  strategy: string;
+  isFormal: boolean; // True if from BSP
+  effectiveness?: "Low" | "Medium" | "High";
+}
+
+export interface BehaviourSupportPlan {
+  fileName?: string;
+  uploadDate?: string;
+  version?: string;
+  strategies: BehaviourStrategy[];
+}
+
+export interface SupportPlan {
+  communicationPreferences: string;
+  triggers: string;
+  motivators: string;
+  whatWorks: string;
+  whatDoesntWork: string;
+  mealtimePlan?: string;
 }
 
 export interface Client {
   id: string;
   name: string;
+  preferredName?: string;
   age?: number;
+  ndisNumber?: string;
+  photoUrl?: string;
+  tags?: string[];
   supportLevel?: string;
   risks?: ClientRisk[];
   goals?: ClientGoal[];
+  medications?: ClientMedication[];
+  bsp?: BehaviourSupportPlan;
+  supportPlan?: SupportPlan;
+  contacts?: ClientContact[];
 }
 
 export interface JournalNote {
@@ -83,6 +137,28 @@ export interface JournalNote {
     social: string;
     strategies: string;
     impact: "Low" | "Medium" | "High" | "";
+  };
+
+  medicationData?: {
+    medNames: string;
+    medDoseTime: string;
+    medRoute: string;
+    medAdministeredBy: string;
+    medMissed: boolean;
+    medMissReason: string;
+    medSideEffects: string;
+    medPrn: string;
+  };
+
+  mealtimeData?: {
+    mealType: string;
+    mealOffered: string;
+    mealConsumed: string;
+    mealAssistance: string;
+    mealChoking: string;
+    mealRefusal: string;
+    mealFluid: string;
+    mealNotes: string;
   };
 }
 
@@ -248,6 +324,8 @@ const MOCK_CLIENTS: Client[] = [
     name: "Alice",
     age: 24,
     supportLevel: "Medium",
+    tags: ["Autism", "Non-verbal", "High Energy"],
+    ndisNumber: "430582910",
     risks: [
       {
         id: "1",
@@ -263,10 +341,53 @@ const MOCK_CLIENTS: Client[] = [
       {
         id: "g1",
         title: "Improve social participation",
+        type: "NDIS",
         description: "Engage with peers in group settings",
         status: "Active",
       },
     ],
+    medications: [
+      {
+        id: "m1",
+        name: "Risperidone",
+        dose: "1mg",
+        route: "Oral",
+        schedule: "08:00 AM",
+        prn: false,
+        hasRisks: true,
+      }
+    ],
+    bsp: {
+      fileName: "Alice_BSP_2025.pdf",
+      uploadDate: "2025-11-15",
+      version: "1.2",
+      strategies: [
+        {
+          id: "bs1",
+          trigger: "Loud unexpected noises",
+          strategy: "Offer noise-cancelling headphones and redirect to a quiet zone.",
+          isFormal: true,
+          effectiveness: "High",
+        }
+      ]
+    },
+    supportPlan: {
+      communicationPreferences: "Uses AAC device on iPad. Responds well to visual schedules.",
+      triggers: "Sudden changes to routine without warning.",
+      motivators: "Trains, drawing, music time.",
+      whatWorks: "Giving a 5-minute and 1-minute warning before transitions.",
+      whatDoesntWork: "Rushing her or speaking loudly.",
+      mealtimePlan: "Texture modified diet - Soft & Bite Sized (Level 6). Requires setup."
+    },
+    contacts: [
+      {
+        id: "c1",
+        name: "Jane Doe",
+        relationship: "Family",
+        phone: "0400 123 456",
+        isEmergency: true,
+      }
+    ]
   },
   {
     id: "Bob",
