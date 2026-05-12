@@ -87,6 +87,29 @@ export interface BehaviourSupportPlan {
   strategies: BehaviourStrategy[];
 }
 
+export type SupportLevel = "Independent" | "Verbal Prompt" | "Minor Physical Assistance" | "Major Physical Assistance" | "Full Assistance" | "Use of Aids";
+
+export interface SupportArea {
+  level: SupportLevel;
+  notes: string;
+}
+
+export interface SupportNeeds {
+  personalCare?: SupportArea;
+  mobility?: SupportArea;
+  eating?: SupportArea;
+  communication?: SupportArea;
+  social?: SupportArea;
+  household?: SupportArea;
+  community?: SupportArea;
+  medication?: SupportArea;
+  emotional?: SupportArea;
+  sensory?: SupportArea;
+  financial?: SupportArea;
+  learning?: SupportArea;
+  other?: SupportArea;
+}
+
 export interface SupportPlan {
   communicationPreferences: string;
   triggers: string;
@@ -94,6 +117,15 @@ export interface SupportPlan {
   whatWorks: string;
   whatDoesntWork: string;
   mealtimePlan?: string;
+  needs?: SupportNeeds;
+}
+
+export interface InterviewDraft {
+  clientId: string;
+  lastSaved: string;
+  type: "full" | "support_only" | "goals_only";
+  currentStep: number;
+  data: any;
 }
 
 export interface Client {
@@ -185,6 +217,7 @@ export interface State {
   activeModules: Record<ModuleName, boolean>;
 
   // Stub data
+  interviewDrafts: InterviewDraft[];
   activities: any[];
   clients: Client[];
   schedules: any[];
@@ -212,6 +245,8 @@ export interface State {
   addOutline: (outline: ActivityOutline) => void;
   updateClient: (client: Client) => void;
   addJournalNote: (note: JournalNote) => void;
+  saveInterviewDraft: (draft: InterviewDraft) => void;
+  clearInterviewDraft: (clientId: string) => void;
 }
 
 const MOCK_ACTIVITIES = [
@@ -430,6 +465,7 @@ export const useStore = create<State>((set) => ({
     Finance: true,
   },
 
+  interviewDrafts: [],
   activities: MOCK_ACTIVITIES,
   clients: MOCK_CLIENTS,
   schedules: MOCK_SCHEDULES,
@@ -521,6 +557,20 @@ export const useStore = create<State>((set) => ({
       clients: state.clients.map((c) => (c.id === client.id ? client : c)),
     })),
   addJournalNote: (note) => set((state) => ({ notes: [...state.notes, note] })),
+  
+  saveInterviewDraft: (draft) => set((state) => {
+    const existingIndex = state.interviewDrafts.findIndex(d => d.clientId === draft.clientId);
+    if (existingIndex >= 0) {
+      const newDrafts = [...state.interviewDrafts];
+      newDrafts[existingIndex] = draft;
+      return { interviewDrafts: newDrafts };
+    }
+    return { interviewDrafts: [...state.interviewDrafts, draft] };
+  }),
+  
+  clearInterviewDraft: (clientId) => set((state) => ({
+    interviewDrafts: state.interviewDrafts.filter(d => d.clientId !== clientId)
+  })),
 
   activateLicense: (key) =>
     set((state) => {

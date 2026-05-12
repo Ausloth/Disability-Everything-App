@@ -424,6 +424,9 @@ export function JournalTool() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const sid = params.get("scheduleId");
+    const clientId = params.get("client");
+    const passedType = params.get("type");
+
     if (sid) {
       setSelectedScheduleId(sid);
       setNoteType("Activity / Session Note");
@@ -434,6 +437,19 @@ export function JournalTool() {
             .filter((c) => selSched.clients.includes(c.name))
             .map((c) => c.id),
         );
+    } else if (clientId) {
+      setSelectedClientIds([clientId]);
+      if (passedType === "medication") {
+        setNoteType("Medication Administration");
+      } else if (passedType === "meal") {
+        setNoteType("Mealtime / Food Administration");
+      } else if (passedType === "communication") {
+        setNoteType("Family / Support Network Communication");
+      } else if (passedType === "goal") {
+        setNoteType("Goal Review / Progress Note");
+      } else if (passedType === "incident") {
+        setNoteType("Incident / Behaviour Note");
+      }
     }
   }, [location, schedules, clients]);
 

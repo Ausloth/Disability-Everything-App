@@ -6,6 +6,7 @@ import { Activities } from './pages/Activities'
 import { OutlineEditor } from './pages/OutlineEditor'
 import { JournalTool } from './pages/JournalTool'
 import { Clients } from './pages/Clients'
+import { SupportAndGoalsInterview } from './pages/SupportAndGoalsInterview'
 import { PromptGenerator } from './pages/PromptGenerator'
 import { CommunicationBoards } from './pages/CommunicationBoards'
 import { BoardBuilder } from './pages/BoardBuilder'
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/activities/outlines/:outlineId" element={<OutlineEditor />} />
             <Route path="/journal" element={<JournalTool />} />
             <Route path="/clients" element={<Clients />} />
+            <Route path="/clients/:clientId/interview" element={<SupportAndGoalsInterview />} />
             <Route path="/comm-boards" element={<CommunicationBoards />} />
             <Route path="/comm-boards/builder/:boardId" element={<BoardBuilder />} />
             <Route path="/prompt-generator" element={<PromptGenerator />} />

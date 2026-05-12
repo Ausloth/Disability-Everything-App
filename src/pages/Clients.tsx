@@ -1,9 +1,18 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import {
   Plus,
   Search,
@@ -21,7 +30,10 @@ import {
   Phone,
   CalendarCheck,
   Download,
-  AlertCircle
+  AlertCircle,
+  ClipboardList,
+  Target,
+  ChevronDown
 } from "lucide-react";
 import {
   useStore,
@@ -32,6 +44,7 @@ import {
 } from "@/store/useStore";
 
 export function Clients() {
+  const navigate = useNavigate();
   const { user, clients, notes } = useStore();
   const isManager = user?.role === "Admin" || user?.role === "Coordinator";
 
@@ -100,6 +113,32 @@ export function Clients() {
           </div>
           {isManager && (
             <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white">
+                    <ClipboardList className="w-4 h-4" />
+                    Assessments & Goals
+                    <ChevronDown className="w-4 h-4 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel>Guided Interviews</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate(`/clients/${selectedClient.id}/interview?mode=full`)} className="cursor-pointer py-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-semibold flex items-center gap-2"><Target className="w-4 h-4 text-indigo-600"/> Full Assessment & Goals</span>
+                      <span className="text-xs text-slate-500">Run the complete support needs and personal goals interview</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate(`/clients/${selectedClient.id}/interview?mode=support_only`)} className="cursor-pointer py-2">
+                     <span className="flex items-center gap-2"><ClipboardList className="w-4 h-4 text-slate-500"/> Support Needs Only</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate(`/clients/${selectedClient.id}/interview?mode=goals_only`)} className="cursor-pointer py-2">
+                     <span className="flex items-center gap-2"><Target className="w-4 h-4 text-slate-500"/> Personal Goals Only</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="outline">Edit Profile</Button>
             </div>
           )}
@@ -164,8 +203,8 @@ export function Clients() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-6 flex flex-col gap-3">
-                    <Button className="w-full justify-start gap-2 bg-indigo-600" onClick={() => window.location.href = `/?tab=journal&client=${selectedClient.id}`}><Plus className="w-4 h-4"/> Log Note / Session</Button>
-                    <Button className="w-full justify-start gap-2 bg-rose-600 hover:bg-rose-700 text-white" onClick={() => window.location.href = `/?tab=journal&client=${selectedClient.id}&type=medication`}><Pill className="w-4 h-4"/> Log Medication</Button>
+                    <Button className="w-full justify-start gap-2 bg-indigo-600" onClick={() => navigate(`/journal?client=${selectedClient.id}`)}><Plus className="w-4 h-4"/> Log Note / Session</Button>
+                    <Button className="w-full justify-start gap-2 bg-rose-600 hover:bg-rose-700 text-white" onClick={() => navigate(`/journal?client=${selectedClient.id}&type=medication`)}><Pill className="w-4 h-4"/> Log Medication</Button>
                     <Button variant="outline" className="w-full justify-start gap-2"><Phone className="w-4 h-4"/> Emergency Contacts</Button>
                   </CardContent>
                 </Card>
@@ -217,6 +256,44 @@ export function Clients() {
                       </div>
                     </div>
                   ) : <div className="text-sm text-slate-500 text-center p-4">No support plan entered.</div>}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* SUPPORT TAB */}
+            <TabsContent value="support" className="space-y-6 outline-none">
+              <Card className="shadow-sm border-slate-200">
+                <CardHeader className="bg-slate-50 flex flex-row items-center justify-between">
+                  <CardTitle className="text-xl">Comprehensive Support Plan</CardTitle>
+                  {isManager && (
+                     <Button size="sm" variant="outline" onClick={() => navigate(`/clients/${selectedClient.id}/interview?mode=support_only`)}>
+                       <ClipboardList className="w-4 h-4 mr-2" /> Update Needs
+                     </Button>
+                  )}
+                </CardHeader>
+                <CardContent className="p-6">
+                  {selectedClient.supportPlan?.needs ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {Object.entries(selectedClient.supportPlan.needs).map(([key, need]: any) => (
+                        <div key={key} className="p-4 rounded-xl border bg-white flex flex-col gap-2 shadow-sm">
+                          <h4 className="font-bold text-slate-900 capitalize flex items-center justify-between">
+                            {key.replace(/([A-Z])/g, ' $1').trim()}
+                            <Badge variant={need.level === "Independent" ? "secondary" : "default"} className={need.level === "Independent" ? "bg-slate-100 text-slate-700" : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"}>
+                              {need.level}
+                            </Badge>
+                          </h4>
+                          <p className="text-sm text-slate-600 mt-2">{need.notes || "No additional preferences noted."}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-12 text-center text-slate-500">
+                      <p className="mb-4">No detailed support needs assessment recorded.</p>
+                      <Button onClick={() => navigate(`/clients/${selectedClient.id}/interview?mode=support_only`)}>
+                        Start Support Assessment
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -307,8 +384,13 @@ export function Clients() {
 
                 <Card className="shadow-sm md:col-span-2 border-slate-200">
                   <CardHeader className="bg-slate-50 flex flex-row items-center justify-between">
-                     <CardTitle className="text-lg">Response Strategies</CardTitle>
-                     {isManager && <Button size="sm" variant="outline"><Plus className="w-4 h-4"/> Add Strategy</Button>}
+                     <CardTitle className="text-lg flex items-center gap-2">Response Strategies</CardTitle>
+                     <div className="flex gap-2">
+                       <Button size="sm" variant="outline" className="gap-2 bg-white text-amber-700 border-amber-200 hover:bg-amber-50" onClick={() => navigate(`/journal?client=${selectedClient.id}&type=incident`)}>
+                         <AlertTriangle className="w-4 h-4"/> Log Incident
+                       </Button>
+                       {isManager && <Button size="sm" variant="outline"><Plus className="w-4 h-4"/> Add Strategy</Button>}
+                     </div>
                   </CardHeader>
                   <CardContent className="p-0">
                     {selectedClient.bsp?.strategies && selectedClient.bsp.strategies.length > 0 ? (
@@ -341,7 +423,7 @@ export function Clients() {
                 <Card className="shadow-sm border-slate-200">
                   <CardHeader className="bg-rose-50 border-b border-rose-100 flex flex-row items-center justify-between">
                      <CardTitle className="text-lg flex items-center gap-2"><Pill className="w-5 h-5 text-rose-600" /> Current Medications</CardTitle>
-                     <Button size="sm" className="bg-rose-600 hover:bg-rose-700 text-white gap-2">Log Administration</Button>
+                     <Button size="sm" className="bg-rose-600 hover:bg-rose-700 text-white gap-2" onClick={() => navigate(`/journal?client=${selectedClient.id}&type=medication`)}>Log Administration</Button>
                   </CardHeader>
                   <CardContent className="p-0">
                     {selectedClient.medications && selectedClient.medications.length > 0 ? (
@@ -379,7 +461,7 @@ export function Clients() {
                            <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide mb-2">Dietary Requirements / Plan</h4>
                            <p className="text-slate-700 text-sm">{selectedClient.supportPlan.mealtimePlan}</p>
                          </div>
-                         <Button className="w-full gap-2 bg-white text-orange-700 border-orange-200 hover:bg-orange-50" variant="outline">Log Meal / Fluid Intake</Button>
+                         <Button className="w-full gap-2 bg-white text-orange-700 border-orange-200 hover:bg-orange-50" variant="outline" onClick={() => navigate(`/journal?client=${selectedClient.id}&type=meal`)}>Log Meal / Fluid Intake</Button>
                        </div>
                      ) : (
                        <div className="text-center p-6 text-slate-500 text-sm flex flex-col items-center">
@@ -396,7 +478,12 @@ export function Clients() {
               <Card className="shadow-sm border-slate-200">
                 <CardHeader className="bg-slate-50 flex flex-row items-center justify-between">
                   <CardTitle className="text-lg">Network & Allied Health</CardTitle>
-                  {isManager && <Button size="sm" variant="outline"><Plus className="w-4 h-4"/> Add Contact</Button>}
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/journal?client=${selectedClient.id}&type=communication`)}>
+                      <FileText className="w-4 h-4 mr-2" /> Log Communication
+                    </Button>
+                    {isManager && <Button size="sm" variant="outline"><Plus className="w-4 h-4 mr-2"/> Add Contact</Button>}
+                  </div>
                 </CardHeader>
                 <CardContent className="p-6">
                   {selectedClient.contacts && selectedClient.contacts.length > 0 ? (
@@ -424,7 +511,12 @@ export function Clients() {
 
             {/* KEEP EXISTING TABS MAPPED FOR NOTES & GOALS */}
             <TabsContent value="goals" className="outline-none space-y-6">
-               <h2 className="text-xl font-bold tracking-tight mt-4">NDIS & Personal Goals</h2>
+                <div className="flex items-center justify-between mt-4">
+                  <h2 className="text-xl font-bold tracking-tight">NDIS & Personal Goals</h2>
+                  <Button size="sm" variant="outline" className="gap-2 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100" onClick={() => navigate(`/journal?client=${selectedClient.id}&type=goal`)}>
+                    <FileText className="w-4 h-4"/> Log Progress Note
+                  </Button>
+                </div>
                 {selectedClient.goals && selectedClient.goals.length > 0 ? (
                   <div className="space-y-3">
                     {selectedClient.goals.map((goal) => (
