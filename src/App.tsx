@@ -6,6 +6,8 @@ import { Activities } from './pages/Activities'
 import { OutlineEditor } from './pages/OutlineEditor'
 import { JournalTool } from './pages/JournalTool'
 import { Clients } from './pages/Clients'
+import { ClientRiskAssessment } from './pages/ClientRiskAssessment'
+import { ActivityRiskAssessment } from './pages/ActivityRiskAssessment'
 import { SupportAndGoalsInterview } from './pages/SupportAndGoalsInterview'
 import { PromptGenerator } from './pages/PromptGenerator'
 import { CommunicationBoards } from './pages/CommunicationBoards'
@@ -13,12 +15,14 @@ import { BoardBuilder } from './pages/BoardBuilder'
 import { Settings } from './pages/Settings'
 import { useStore } from './store/useStore'
 import { CaptchaGate } from './components/CaptchaGate'
+import { Toaster } from 'sonner'
 
 export default function App() {
   const { user } = useStore() // We can use this later for auth walls
 
   return (
     <CaptchaGate>
+      <Toaster position="top-right" richColors />
       <Router>
         <Layout>
           <Routes>
@@ -28,6 +32,8 @@ export default function App() {
             <Route path="/activities/outlines/:outlineId" element={<OutlineEditor />} />
             <Route path="/journal" element={<JournalTool />} />
             <Route path="/clients" element={<Clients />} />
+            <Route path="/clients/:clientId/risk-assessment" element={<ClientRiskAssessment />} />
+            <Route path="/activities/outlines/:outlineId/risk-assessment" element={<ActivityRiskAssessment />} />
             <Route path="/clients/:clientId/interview" element={<SupportAndGoalsInterview />} />
             <Route path="/comm-boards" element={<CommunicationBoards />} />
             <Route path="/comm-boards/builder/:boardId" element={<BoardBuilder />} />

@@ -18,9 +18,12 @@ export function Activities() {
           <p className="text-muted-foreground mt-2">Manage all programs and activities run at your center.</p>
         </div>
         {isManager && (
-          <Button className="gap-2">
+          <Button 
+            className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+            onClick={() => navigate("/activities/outlines/new")}
+          >
             <Plus className="w-4 h-4" />
-            New Activity
+            New Program Map
           </Button>
         )}
       </div>
@@ -80,11 +83,15 @@ export function Activities() {
                          className="flex-1 gap-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400"
                          onClick={() => navigate(`/activities/outlines/${hasOutline.id}`)}
                        >
-                         <ListChecks className="w-4 h-4" /> Map / Outline
+                         <ListChecks className="w-4 h-4" /> Edit Program
                        </Button>
                     </div>
                   ) : (
-                    <Button variant="outline" className="w-full gap-2 text-slate-500 border-dashed">
+                    <Button 
+                      variant="outline" 
+                      className="w-full gap-2 text-slate-500 border-dashed"
+                      onClick={() => navigate(`/activities/outlines/new?activityId=${activity.id}`)}
+                    >
                        <Plus className="w-4 h-4" /> Create Outline Map
                     </Button>
                   )}

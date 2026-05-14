@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { useStore, JournalNote } from "@/store/useStore";
+import { useStore, JournalNote, Client } from "@/store/useStore";
 import {
   Card,
   CardContent,
@@ -13,6 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Save,
   Check,
@@ -28,6 +36,10 @@ import {
   PhoneCall,
   Pill,
   Coffee,
+  Calendar,
+  MapPin,
+  Clock,
+  Zap,
 } from "lucide-react";
 
 const NOTE_TYPES = [
@@ -149,6 +161,7 @@ const getCategory = (t: string) => {
   if (t === "Mealtime / Food Administration") return "mealtime";
   if (t.includes("Communication") || t.includes("Appointment")) return "comm";
   if (t.includes("Incident")) return "incident";
+  if (t === "Goal Review / Progress Note") return "goal";
   return "general";
 };
 
@@ -322,6 +335,14 @@ const generateJournalText = (
     return p.join("\n\n");
   }
 
+  if (category === "goal") {
+    let p = [`Goal Review / Progress Note: ${clientName}`];
+    if (data.goal) p.push(`Goal focused on: ${data.goal}`);
+    if (data.goalProgression) p.push(`\nReview / Evidence of Progress:\n${data.goalProgression}`);
+    if (data.mood) p.push(`\nAchievement Level: ${data.mood}`);
+    return p.join("\n");
+  }
+
   let p = [];
   if (data.genContext) p.push(`Context / Event:\n${data.genContext}`);
   if (data.genDetails) p.push(`Details / Observations:\n${data.genDetails}`);
@@ -394,6 +415,7 @@ export function JournalTool() {
   const [subject, setSubject] = useState<string>("");
   const [formData, setFormData] = useState<JournalFormData>(INITIAL_FORM_DATA);
   const [isManuallyEdited, setIsManuallyEdited] = useState(false);
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
   const [finalContent, setFinalContent] = useState("");
   const [copied, setCopied] = useState(false);
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
@@ -409,6 +431,24 @@ export function JournalTool() {
   });
 
   const category = getCategory(noteType);
+
+  const markAutoFilled = useCallback((fields: string[]) => {
+    setAutoFilledFields((prev) => {
+      const next = new Set(prev);
+      fields.forEach((f) => next.add(f));
+      return next;
+    });
+  }, []);
+
+  const handleChange = useCallback((field: keyof JournalFormData, value: any) => {
+    setFormData((p) => ({ ...p, [field]: value }));
+    setAutoFilledFields((prev) => {
+      const next = new Set(prev);
+      next.delete(field as string);
+      return next;
+    });
+  }, []);
+
   const selectedClientNames = clients
     .filter((c) => selectedClientIds.includes(c.id))
     .map((c) => c.name);
@@ -431,12 +471,12 @@ export function JournalTool() {
       setSelectedScheduleId(sid);
       setNoteType("Activity / Session Note");
       const selSched = schedules.find((s) => s.id === sid);
-      if (selSched)
-        setSelectedClientIds(
-          clients
-            .filter((c) => selSched.clients.includes(c.name))
-            .map((c) => c.id),
-        );
+      if (selSched) {
+        const matchingClientIds = clients
+          .filter((c) => selSched.clients.includes(c.name))
+          .map((c) => c.id);
+        setSelectedClientIds(matchingClientIds);
+      }
     } else if (clientId) {
       setSelectedClientIds([clientId]);
       if (passedType === "medication") {
@@ -453,6 +493,99 @@ export function JournalTool() {
     }
   }, [location, schedules, clients]);
 
+  // -- SMART AUTO-FILL LOGIC --
+
+  // 1. Auto-fill from Schedule
+  useEffect(() => {
+    if (!selectedScheduleId) return;
+
+    const sched = schedules.find((s) => s.id === selectedScheduleId);
+    if (!sched) return;
+
+    const act = activities.find((a) => a.id === sched.activityId);
+    const outline = outlines.find((o) => o.id === sched.outlineId);
+    const week = outline?.weeks.find(
+      (w) => w.weekNumber === sched.currentWeek,
+    );
+
+    const updates: Partial<JournalFormData> = {};
+    const filled: string[] = [];
+
+    if (act) {
+      if (!formData.activity) {
+        updates.activity = act.name;
+        filled.push("activity");
+      }
+      if (!formData.location) {
+        updates.location = act.location || "Community";
+        filled.push("location");
+      }
+    }
+
+    if (week) {
+      if (!formData.specificActivity) {
+        updates.specificActivity = week.variationNote || week.tasksContent || "";
+        filled.push("specificActivity");
+      }
+      if (!formData.goal) {
+        updates.goal = week.goalProgression || "";
+        filled.push("goal");
+      }
+    }
+
+    // Auto-select clients from schedule
+    const schedClientIds = clients
+      .filter((c) => sched.clients.includes(c.name))
+      .map((c) => c.id);
+    
+    if (selectedClientIds.length === 0 && schedClientIds.length > 0) {
+      setSelectedClientIds(schedClientIds);
+    }
+
+    if (Object.keys(updates).length > 0) {
+      setFormData((prev) => ({ ...prev, ...updates }));
+      markAutoFilled(filled);
+    }
+  }, [selectedScheduleId, schedules, activities, outlines, clients, markAutoFilled]);
+
+  // 2. Auto-fill from selected Client Profile based on Note Type
+  useEffect(() => {
+    if (selectedClientIds.length !== 1) return;
+    const client = clients.find((c) => c.id === selectedClientIds[0]);
+    if (!client) return;
+
+    const updates: Partial<JournalFormData> = {};
+    const filled: string[] = [];
+
+    if (noteType === "Mealtime / Food Administration") {
+      if (!formData.mealNotes && client.supportPlan?.mealtimePlan) {
+        updates.mealNotes = `Client Plan: ${client.supportPlan.mealtimePlan}`;
+        filled.push("mealNotes");
+      }
+    }
+
+    if (noteType === "Incident / Behaviour Note") {
+      if (!formData.incAntecedent && client.supportPlan?.triggers) {
+        updates.incAntecedent = `Known triggers: ${client.supportPlan.triggers}`;
+        filled.push("incAntecedent");
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      setFormData((prev) => ({ ...prev, ...updates }));
+      markAutoFilled(filled);
+    }
+  }, [noteType, selectedClientIds, clients, markAutoFilled]);
+
+  const AutoFillBadge = ({ field }: { field: string }) => {
+    if (!autoFilledFields.has(field)) return null;
+    return (
+      <Badge variant="outline" className="ml-2 text-[10px] bg-indigo-50 text-indigo-700 border-indigo-200 animate-in fade-in zoom-in h-4 py-0 px-1 border-dashed">
+        <Sparkles className="w-2 h-2 mr-1" /> Auto-filled
+      </Badge>
+    );
+  };
+
   const selectedSchedule = schedules.find((s) => s.id === selectedScheduleId);
   const activityContext = selectedSchedule
     ? activities.find((a) => a.id === selectedSchedule.activityId)
@@ -466,9 +599,6 @@ export function JournalTool() {
           (w) => w.weekNumber === selectedSchedule.currentWeek,
         )
       : null;
-
-  const handleChange = (field: keyof JournalFormData, value: any) =>
-    setFormData((p) => ({ ...p, [field]: value }));
 
   const handleCopy = () => {
     navigator.clipboard.writeText(finalContent);
@@ -488,6 +618,7 @@ export function JournalTool() {
       genContext: p.genContext,
     }));
     setIsManuallyEdited(false);
+    setAutoFilledFields(new Set());
     setBarriers({
       physical: "",
       sensory: "",
@@ -710,35 +841,63 @@ export function JournalTool() {
 
                 {category === "activity" && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 dark:bg-slate-900/20 p-5 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <InputGroup label="Linked Schedule / My Day (Auto-fills rest of section)">
+                      <Select
+                        value={selectedScheduleId}
+                        onValueChange={(v) => setSelectedScheduleId(v)}
+                      >
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="Select from today's schedule..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {schedules.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.time} - {activities.find((a) => a.id === s.activityId)?.name || "Activity"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </InputGroup>
+                    <div className="hidden md:block" />
+
                     <InputGroup label="Primary Subject / Name">
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => handleChange("name", e.target.value)}
-                        placeholder="e.g. John"
-                      />
+                      <div className="flex items-center">
+                        <Input
+                          value={formData.name}
+                          onChange={(e) => handleChange("name", e.target.value)}
+                          placeholder="e.g. John"
+                        />
+                        <AutoFillBadge field="name" />
+                      </div>
                     </InputGroup>
                     <InputGroup label="Activity / Focus">
-                      <Input
-                        value={formData.activity}
-                        onChange={(e) =>
-                          handleChange("activity", e.target.value)
-                        }
-                        placeholder="e.g. Bowling"
-                      />
+                      <div className="flex items-center">
+                        <Input
+                          value={formData.activity}
+                          onChange={(e) =>
+                            handleChange("activity", e.target.value)
+                          }
+                          placeholder="e.g. Bowling"
+                        />
+                        <AutoFillBadge field="activity" />
+                      </div>
                     </InputGroup>
                     <InputGroup label="Location Setting">
-                      <ChipGroup
-                        options={[
-                          "Onsite",
-                          "Community",
-                          "In-Home",
-                          "Transport",
-                        ]}
-                        value={formData.location}
-                        onChange={(v) => handleChange("location", v)}
-                        activeClass="bg-indigo-100 border-indigo-300 text-indigo-900"
-                        hoverClass="bg-white hover:border-indigo-400 text-slate-700"
-                      />
+                      <div className="flex flex-col gap-2">
+                        <ChipGroup
+                          options={[
+                            "Onsite",
+                            "Community",
+                            "In-Home",
+                            "Transport",
+                          ]}
+                          value={formData.location}
+                          onChange={(v) => handleChange("location", v)}
+                          activeClass="bg-indigo-100 border-indigo-300 text-indigo-900"
+                          hoverClass="bg-white hover:border-indigo-400 text-slate-700"
+                        />
+                        <AutoFillBadge field="location" />
+                      </div>
                     </InputGroup>
                     <InputGroup label="Session Time">
                       <ChipGroup
@@ -753,15 +912,18 @@ export function JournalTool() {
                       label="Specific Participation / Actions"
                       colSpan={2}
                     >
-                      <Textarea
-                        rows={2}
-                        value={formData.specificActivity}
-                        onChange={(e) =>
-                          handleChange("specificActivity", e.target.value)
-                        }
-                        placeholder="e.g. engaged strongly with the art project."
-                        className="bg-white"
-                      />
+                      <div className="flex flex-col gap-2">
+                        <Textarea
+                          rows={2}
+                          value={formData.specificActivity}
+                          onChange={(e) =>
+                            handleChange("specificActivity", e.target.value)
+                          }
+                          placeholder="e.g. engaged strongly with the art project."
+                          className="bg-white"
+                        />
+                        <AutoFillBadge field="specificActivity" />
+                      </div>
                     </InputGroup>
                     <InputGroup label="Overall Mood" colSpan={2}>
                       <ChipGroup
@@ -929,41 +1091,84 @@ export function JournalTool() {
                       </InputGroup>
                     ) : (
                       <>
+                        <InputGroup label="Select from Client Profile (Recommended)" colSpan={2}>
+                          <Select
+                            onValueChange={(v) => {
+                              const client = clients.find(c => selectedClientIds.includes(c.id));
+                              const med = client?.medications?.find(m => m.id === v);
+                              if (med) {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  medNames: med.name,
+                                  medDoseTime: `${med.dose} at ${med.schedule}`,
+                                  medRoute: med.route as any,
+                                  medNotes: med.notes || "",
+                                }));
+                                markAutoFilled(['medNames', 'medDoseTime', 'medRoute', 'medNotes']);
+                              }
+                            }}
+                          >
+                             <SelectTrigger className="bg-white">
+                               <SelectValue placeholder="Select a medication..." />
+                             </SelectTrigger>
+                             <SelectContent>
+                               {clients
+                                 .filter(c => selectedClientIds.includes(c.id))
+                                 .flatMap(c => c.medications || [])
+                                 .map(m => (
+                                   <SelectItem key={m.id} value={m.id}>
+                                     {m.name} ({m.dose})
+                                   </SelectItem>
+                                 ))
+                               }
+                             </SelectContent>
+                          </Select>
+                        </InputGroup>
+
                         <InputGroup label="Medication Name(s)">
-                          <Input
-                            value={formData.medNames}
-                            onChange={(e) =>
-                              handleChange("medNames", e.target.value)
-                            }
-                            placeholder="e.g. Risperidone"
-                            className="bg-white"
-                          />
+                          <div className="flex flex-col gap-2">
+                            <Input
+                              value={formData.medNames}
+                              onChange={(e) =>
+                                handleChange("medNames", e.target.value)
+                              }
+                              placeholder="e.g. Risperidone"
+                              className="bg-white"
+                            />
+                            <AutoFillBadge field="medNames" />
+                          </div>
                         </InputGroup>
                         <InputGroup label="Dose & Time Administered">
-                          <Input
-                            value={formData.medDoseTime}
-                            onChange={(e) =>
-                              handleChange("medDoseTime", e.target.value)
-                            }
-                            placeholder="e.g. 1mg at 08:00 AM"
-                            className="bg-white"
-                          />
+                          <div className="flex flex-col gap-2">
+                            <Input
+                              value={formData.medDoseTime}
+                              onChange={(e) =>
+                                handleChange("medDoseTime", e.target.value)
+                              }
+                              placeholder="e.g. 1mg at 08:00 AM"
+                              className="bg-white"
+                            />
+                            <AutoFillBadge field="medDoseTime" />
+                          </div>
                         </InputGroup>
                         <InputGroup label="Route / Method">
-                          <ChipGroup
-                            options={[
-                              "Oral",
-                              "Topical",
-                              "Injection",
-                              "Drop",
-                              "Inhaler",
-                              "Other",
-                            ]}
-                            value={formData.medRoute}
-                            onChange={(v) => handleChange("medRoute", v)}
-                            activeClass="bg-rose-200 border-rose-300 text-rose-900"
-                            hoverClass="bg-white hover:border-rose-400 text-slate-700"
-                          />
+                          <div className="flex flex-col gap-2">
+                            <ChipGroup
+                              options={[
+                                "Oral",
+                                "Topical",
+                                "Injection",
+                                "Drop",
+                                "Inhaler",
+                                "Other",
+                              ]}
+                              value={formData.medRoute}
+                              onChange={(v) => handleChange("medRoute", v)}
+                              activeClass="bg-rose-200 border-rose-300 text-rose-900"
+                              hoverClass="bg-white hover:border-rose-400 text-slate-700"
+                            />
+                            <AutoFillBadge field="medRoute" />
+                          </div>
                         </InputGroup>
                         <InputGroup label="Administered By">
                           <Input
@@ -1111,20 +1316,56 @@ export function JournalTool() {
                       />
                     </InputGroup>
                     <InputGroup label="Additional Notes">
-                      <Input
-                        value={formData.mealNotes}
-                        onChange={(e) =>
-                          handleChange("mealNotes", e.target.value)
-                        }
-                        placeholder="Special diets, supplements, etc."
-                        className="bg-white"
-                      />
+                      <div className="flex flex-col gap-2">
+                        <Input
+                          value={formData.mealNotes}
+                          onChange={(e) =>
+                            handleChange("mealNotes", e.target.value)
+                          }
+                          placeholder="Special diets, supplements, etc."
+                          className="bg-white"
+                        />
+                        <AutoFillBadge field="mealNotes" />
+                      </div>
                     </InputGroup>
                   </div>
                 )}
 
                 {category === "comm" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-blue-50 p-5 rounded-xl border border-blue-100">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                    <InputGroup label="Select Contact from Profile" colSpan={2}>
+                      <Select
+                        onValueChange={(v) => {
+                          const client = clients.find(c => selectedClientIds.includes(c.id));
+                          const contact = client?.contacts?.find(c => c.id === v);
+                          if (contact) {
+                            setFormData(prev => ({
+                              ...prev,
+                              commContactName: contact.name,
+                              commContactType: contact.relationship as any,
+                            }));
+                            markAutoFilled(['commContactName', 'commContactType']);
+                          }
+                        }}
+                      >
+                         <SelectTrigger className="bg-white">
+                           <SelectValue placeholder="Select a known contact..." />
+                         </SelectTrigger>
+                         <SelectContent>
+                           {clients
+                             .filter(c => selectedClientIds.includes(c.id))
+                             .flatMap(c => c.contacts || [])
+                             .map(c => (
+                               <SelectItem key={c.id} value={c.id}>
+                                 {c.name} ({c.relationship})
+                               </SelectItem>
+                             ))
+                           }
+                           <SelectItem value="other">Other / Not Listed</SelectItem>
+                         </SelectContent>
+                      </Select>
+                    </InputGroup>
+
                     <InputGroup label="Contact Method">
                       <ChipGroup
                         options={["Called", "Emailed", "Messaged", "Met with"]}
@@ -1135,29 +1376,35 @@ export function JournalTool() {
                       />
                     </InputGroup>
                     <InputGroup label="Contact Type">
-                      <ChipGroup
-                        options={[
-                          "Family Member",
-                          "Support Coordinator",
-                          "Therapist",
-                          "Medical Professional",
-                          "Teacher / School",
-                          "Internal Team Member",
-                        ]}
-                        value={formData.commContactType}
-                        onChange={(v) => handleChange("commContactType", v)}
-                        activeClass="bg-blue-200 border-blue-300 text-blue-900"
-                        hoverClass="bg-white hover:border-blue-400"
-                      />
+                      <div className="flex flex-col gap-2">
+                        <ChipGroup
+                          options={[
+                            "Family Member",
+                            "Support Coordinator",
+                            "Therapist",
+                            "Medical Professional",
+                            "Teacher / School",
+                            "Internal Team Member",
+                          ]}
+                          value={formData.commContactType}
+                          onChange={(v) => handleChange("commContactType", v)}
+                          activeClass="bg-blue-200 border-blue-300 text-blue-900"
+                          hoverClass="bg-white hover:border-blue-400"
+                        />
+                        <AutoFillBadge field="commContactType" />
+                      </div>
                     </InputGroup>
                     <InputGroup label="Contact Name">
-                      <Input
-                        value={formData.commContactName}
-                        onChange={(e) =>
-                          handleChange("commContactName", e.target.value)
-                        }
-                        className="bg-white"
-                      />
+                      <div className="flex flex-col gap-2">
+                        <Input
+                          value={formData.commContactName}
+                          onChange={(e) =>
+                            handleChange("commContactName", e.target.value)
+                          }
+                          className="bg-white"
+                        />
+                        <AutoFillBadge field="commContactName" />
+                      </div>
                     </InputGroup>
                     <InputGroup label="Regarding">
                       <Input
@@ -1192,7 +1439,7 @@ export function JournalTool() {
                 )}
 
                 {category === "incident" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-red-50 p-5 rounded-xl border border-red-100">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-red-50 dark:bg-red-900/10 p-5 rounded-xl border border-red-100 dark:border-red-900/30">
                     <InputGroup label="Incident Type" colSpan={2}>
                       <ChipGroup
                         options={[
@@ -1211,6 +1458,37 @@ export function JournalTool() {
                         hoverClass="bg-white hover:border-red-400"
                       />
                     </InputGroup>
+                    
+                    {/* BSP Suggestions */}
+                    {clients.filter(c => selectedClientIds.includes(c.id)).some(c => c.bsp?.strategies?.length) && (
+                      <div className="md:col-span-2 p-3 bg-white/50 border border-red-200 rounded-lg space-y-2">
+                        <Label className="text-xs font-bold text-red-800 flex items-center gap-1">
+                           <Zap className="w-3 h-3" /> Suggestions from Behaviour Support Plan (BSP)
+                        </Label>
+                        <div className="flex flex-wrap gap-2">
+                          {clients
+                            .filter(c => selectedClientIds.includes(c.id))
+                            .flatMap(c => c.bsp?.strategies || [])
+                            .map(s => (
+                              <Button
+                                key={s.id}
+                                variant="outline"
+                                size="sm"
+                                className="text-[10px] h-7 bg-white hover:bg-red-50"
+                                onClick={() => {
+                                  handleChange('incAntecedent', s.trigger);
+                                  handleChange('incIntervention', s.strategy);
+                                  markAutoFilled(['incAntecedent', 'incIntervention']);
+                                }}
+                              >
+                                Trigger: {s.trigger.substring(0, 20)}...
+                              </Button>
+                            ))
+                          }
+                        </div>
+                      </div>
+                    )}
+
                     <InputGroup label="Incident ID / Ref (External)">
                       <Input
                         value={formData.incId}
@@ -1244,14 +1522,17 @@ export function JournalTool() {
                       </div>
                     </InputGroup>
                     <InputGroup label="A - Antecedent (Before)" colSpan={2}>
-                      <Textarea
-                        rows={2}
-                        value={formData.incAntecedent}
-                        onChange={(e) =>
-                          handleChange("incAntecedent", e.target.value)
-                        }
-                        className="bg-white"
-                      />
+                      <div className="flex flex-col gap-2">
+                        <Textarea
+                          rows={2}
+                          value={formData.incAntecedent}
+                          onChange={(e) =>
+                            handleChange("incAntecedent", e.target.value)
+                          }
+                          className="bg-white"
+                        />
+                        <AutoFillBadge field="incAntecedent" />
+                      </div>
                     </InputGroup>
                     <InputGroup
                       label="B - Behavior / Event Details"
@@ -1270,14 +1551,17 @@ export function JournalTool() {
                       label="C - Consequence / Intervention"
                       colSpan={2}
                     >
-                      <Textarea
-                        rows={2}
-                        value={formData.incIntervention}
-                        onChange={(e) =>
-                          handleChange("incIntervention", e.target.value)
-                        }
-                        className="bg-white"
-                      />
+                      <div className="flex flex-col gap-2">
+                        <Textarea
+                          rows={2}
+                          value={formData.incIntervention}
+                          onChange={(e) =>
+                            handleChange("incIntervention", e.target.value)
+                          }
+                          className="bg-white"
+                        />
+                        <AutoFillBadge field="incIntervention" />
+                      </div>
                     </InputGroup>
                     <InputGroup label="Outcome / Status" colSpan={2}>
                       <div className="space-y-2">
@@ -1303,6 +1587,74 @@ export function JournalTool() {
                           className="bg-white"
                         />
                       </div>
+                    </InputGroup>
+                  </div>
+                )}
+
+                {category === "goal" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-emerald-50 dark:bg-emerald-900/10 p-5 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                    <InputGroup label="Select Goal to Review" colSpan={2}>
+                      <Select
+                        onValueChange={(v) => {
+                          const goal = availableGoals.find(g => g.id === v);
+                          if (goal) {
+                            handleChange('goal', `${goal.title}: ${goal.description}`);
+                            if (!selectedGoalIds.includes(goal.id)) {
+                              toggleGoal(goal.id);
+                            }
+                            markAutoFilled(['goal']);
+                          }
+                        }}
+                      >
+                         <SelectTrigger className="bg-white">
+                           <SelectValue placeholder="Select a goal..." />
+                         </SelectTrigger>
+                         <SelectContent>
+                           {availableGoals.map(g => (
+                             <SelectItem key={g.id} value={g.id}>
+                               {g.clientName}: {g.title}
+                             </SelectItem>
+                           ))}
+                         </SelectContent>
+                      </Select>
+                    </InputGroup>
+
+                    <InputGroup label="Selected Goal Description" colSpan={2}>
+                      <div className="flex flex-col gap-2">
+                        <Input
+                          value={formData.goal}
+                          onChange={(e) => handleChange("goal", e.target.value)}
+                          className="bg-white"
+                        />
+                        <AutoFillBadge field="goal" />
+                      </div>
+                    </InputGroup>
+
+                    <InputGroup label="Progress Note / Evidence" colSpan={2}>
+                      <Textarea
+                        rows={4}
+                        value={formData.goalProgression}
+                        onChange={(e) =>
+                          handleChange("goalProgression", e.target.value)
+                        }
+                        placeholder="Detail how the client worked toward this goal today..."
+                        className="bg-white"
+                      />
+                    </InputGroup>
+                    
+                    <InputGroup label="Level of Achievement">
+                      <ChipGroup
+                        options={[
+                          "Not Achieved",
+                          "Partially Achieved",
+                          "Achieved",
+                          "Exceeded",
+                        ]}
+                        value={formData.mood} // Reusing mood state for achievement level for quick implementation
+                        onChange={(v) => handleChange("mood", v)}
+                        activeClass="bg-emerald-200 border-emerald-300 text-emerald-900"
+                        hoverClass="bg-white hover:border-emerald-400"
+                      />
                     </InputGroup>
                   </div>
                 )}

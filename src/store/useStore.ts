@@ -194,15 +194,35 @@ export interface JournalNote {
   };
 }
 
+export interface TimelineEvent {
+  id: string;
+  time: string;
+  activity: string;
+}
+
 export interface ActivityOutline {
   id: string;
   activityId: string;
   title: string;
+  category?: string;
   style: "Recurring" | "Progressive";
   startDate: string;
+  dayOfWeek?: string;
+  startTime?: string;
+  endTime?: string;
+  participantsDescription?: string;
+  locationDescription?: string;
+  transportNotes?: string;
+  standardCost?: string;
+  staffRatio?: string;
   durationWeeks: number;
   weeks: OutlineWeek[];
   risks?: RiskAssessmentItem[];
+  equipment: string[];
+  timeline: TimelineEvent[];
+  closingNotes?: string;
+  celebrationIdeas?: string;
+  isPublished?: boolean;
 }
 
 export interface State {
@@ -289,9 +309,17 @@ const MOCK_OUTLINES: ActivityOutline[] = [
     id: "out-1",
     activityId: "act-3",
     title: "Weekly Bowling League",
+    category: "Physical",
     style: "Recurring",
     startDate: "2026-05-01",
     durationWeeks: 24,
+    equipment: ["Bowling Balls", "Bowling Shoes (provided)", "Socks"],
+    timeline: [
+      { id: "1", time: "10:00 AM", activity: "Pick up and Travel" },
+      { id: "2", time: "10:45 AM", activity: "Shoe Rental & Lane Setup" },
+      { id: "3", time: "11:00 AM", activity: "Bowling Round 1" },
+      { id: "4", time: "12:00 PM", activity: "Lunch and Social" },
+    ],
     weeks: Array.from({ length: 24 }).map((_, i) => ({
       id: `w-${i + 1}`,
       weekNumber: i + 1,
@@ -305,14 +333,24 @@ const MOCK_OUTLINES: ActivityOutline[] = [
       staffGuide:
         "Ensure clients are wearing appropriate socks. Assist with score entry and choosing the right weight ball.",
     })),
+    closingNotes: "Organise a trophy presentation in Week 24.",
+    isPublished: true,
   },
   {
     id: "out-2",
     activityId: "act-1",
     title: "Garden to Plate Program",
+    category: "Outdoors",
     style: "Progressive",
     startDate: "2026-05-01",
     durationWeeks: 24,
+    equipment: ["Garden Gloves", "Hand Trowels", "Watering Cans", "Seeds"],
+    timeline: [
+      { id: "1", time: "1:30 PM", activity: "Garden Check-in & Sunscreen" },
+      { id: "2", time: "1:45 PM", activity: "Main Gardening Task" },
+      { id: "3", time: "2:45 PM", activity: "Clean tools & Packing up" },
+      { id: "4", time: "3:15 PM", activity: "Reflection & Watering" },
+    ],
     weeks: Array.from({ length: 24 }).map((_, i) => ({
       id: `w-${i + 1}`,
       weekNumber: i + 1,

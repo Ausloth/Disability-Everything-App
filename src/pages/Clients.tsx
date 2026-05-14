@@ -21,6 +21,7 @@ import {
   Filter,
   ArrowLeft,
   AlertTriangle,
+  ShieldAlert,
   FileText,
   Activity,
   Tag,
@@ -128,6 +129,12 @@ export function Clients() {
                       <div className="flex flex-col gap-1">
                         <span className="font-semibold flex items-center gap-2"><Target className="w-4 h-4 text-indigo-600"/> Full Assessment & Goals</span>
                         <span className="text-xs text-slate-500">Run the complete support needs and personal goals interview</span>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(`/clients/${selectedClient.id}/risk-assessment`)} className="cursor-pointer py-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-semibold flex items-center gap-2"><ShieldAlert className="w-4 h-4 text-rose-600"/> Guided Risk Assessment</span>
+                        <span className="text-xs text-slate-500">Identify medical, behavioral, and social risks</span>
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
